@@ -1,37 +1,51 @@
 package me.loganfuller.tostr;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
-import android.os.Build;
 import android.util.Log;
 
-import static android.os.Build.VERSION.SDK_INT;
+import com.pubnub.api.PNConfiguration;
+import com.pubnub.api.PubNub;
+import com.pubnub.api.callbacks.PNCallback;
+import com.pubnub.api.models.consumer.PNPublishResult;
+import com.pubnub.api.models.consumer.PNStatus;
+
+import org.json.JSONObject;
 
 public class AlarmReceiver extends BroadcastReceiver{
 
-    private static final long FREQUENCY = 1000;
-
+    private static final String PN = "PubNub";
+    PubNub pubnub;
+    String channel = "tostr";
 
     @Override
     public void onReceive(Context context, Intent intent) {
+
+        // Initialize PubNub with Subscribe and Publish keys
+        PNConfiguration pnConfiguration = new PNConfiguration();
+        pnConfiguration.setSubscribeKey("sub-c-05493e44-b06e-11e6-b4d6-02ee2ddab7fe");
+        pnConfiguration.setPublishKey("pub-c-8b0161d7-b88a-44b6-99e2-bd29ad0ecda9");
+
+        pubnub = new PubNub(pnConfiguration);
+
         Log.i("Alarm", "The alarm is ringing!");
         Intent startIntent = new Intent(context, RingtoneService.class);
         context.startService(startIntent);
-//        AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-//        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
-//        manager.cancel(pendingIntent);
-//        if (SDK_INT < Build.VERSION_CODES.KITKAT)
-//            manager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + FREQUENCY, pendingIntent);
-//        else if (Build.VERSION_CODES.KITKAT <= SDK_INT && SDK_INT < Build.VERSION_CODES.M)
-//            manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + FREQUENCY, pendingIntent);
-//        else if (SDK_INT >= Build.VERSION_CODES.M)
-//            manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + FREQUENCY, pendingIntent);
-//        Log.i("Alarm", "The alarm has been reset for " + FREQUENCY + " from now.");
+
+        pubnub.publish().channel(channel).message("Alarm was received.").async(new PNCallback<PNPublishResult>() {
+            @Override
+            public void onResponse(PNPublishResult result, PNStatus status) {
+                // Check whether request completed successfully
+                if(!status.isError()) {
+                    // Message successfully published
+                    Log.i(PN, "Publish request successfully completed.");
+                }
+                else {
+                    // Message publish failed
+                    Log.w(PN, "Publish request failed to complete.");
+                }
+            }
+        });
     }
 }

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Tostr</string>
+    <string name="action_emergency_stop">Stop Alarm</string>
 </resources>
