@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -15,7 +14,9 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
@@ -29,31 +30,54 @@ import com.pubnub.api.models.consumer.PNStatus;
 import com.pubnub.api.models.consumer.pubsub.PNMessageResult;
 import com.pubnub.api.models.consumer.pubsub.PNPresenceEventResult;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Locale;
 
 import static android.os.Build.VERSION.SDK_INT;
 
 public class MainActivity extends AppCompatActivity {
 
+    /*
+    PubNub Variables
+     */
     private static final String PN = "PubNub";
     PubNub pubnub;
     String channel = "tostr";
 
-    // Alarm variables
+    /*
+    Alarm Variables
+     */
     PendingIntent pendingIntent;
     AlarmManager alarmManager;
 
-    TextView txtStatus;
+    /*
+    View declarations
+     */
+    TextView txtStatus, txtAlarmTime;
+    Button btnSetAlarm;
+    ListView lvAlarms;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        /*
+        Setup the toolbar
+         */
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        /*
+        Setup the FAB button and its associated onClickListener
+         */
+
+        /*
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -61,14 +85,17 @@ public class MainActivity extends AppCompatActivity {
                 setAlarm();
             }
         });
+        */
 
-        // Alarm
+        /*
+        Setup the alarm
+         */
         Intent alarmIntent = new Intent(MainActivity.this, AlarmReceiver.class);
         pendingIntent = PendingIntent.getBroadcast(MainActivity.this, 0, alarmIntent, 0);
 
-        txtStatus = (TextView) findViewById(R.id.txtStatus);
-
-        // Initialize PubNub with Subscribe and Publish keys
+        /*
+        Initialize PubNub
+         */
         PNConfiguration pnConfiguration = new PNConfiguration();
         pnConfiguration.setSubscribeKey("sub-c-05493e44-b06e-11e6-b4d6-02ee2ddab7fe");
         pnConfiguration.setPublishKey("pub-c-8b0161d7-b88a-44b6-99e2-bd29ad0ecda9");
@@ -85,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
                 else if(status.getCategory() == PNStatusCategory.PNConnectedCategory) {
                     // We are connected, so we can now publish successfully.
                     if(status.getCategory() == PNStatusCategory.PNConnectedCategory) {
-                        txtStatus.setText("CONNECTED");
+                        txtStatus.setText(R.string.pubnub_status_connected);
                         pubnub.publish().channel(channel).message("Successfully connected to channel " + channel).async(new PNCallback<PNPublishResult>() {
                             @Override
                             public void onResponse(PNPublishResult result, PNStatus status) {
@@ -124,9 +151,6 @@ public class MainActivity extends AppCompatActivity {
                         cancelAlarm();
                     }
 
-                } else {
-                    // Message has been received on channel stored in
-                    // message.getSubscription()
                 }
             }
 
@@ -136,6 +160,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         pubnub.subscribe().channels(Collections.singletonList(channel)).execute();
+
+        /*
+        Assign views to their variables
+         */
+        txtStatus = (TextView) findViewById(R.id.txtStatus);
+        txtAlarmTime = (TextView) findViewById(R.id.txtAlarmTime);
+
+        lvAlarms = (ListView) findViewById(R.id.lvAlarms);
+
+        btnSetAlarm = (Button) findViewById(R.id.btnSetAlarm);
+        btnSetAlarm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                setAlarm();
+            }
+        });
+
+        /*
+        Initializing lvAlarms
+         */
+
+
     }
 
     public void setAlarm() {
@@ -174,22 +220,51 @@ public class MainActivity extends AppCompatActivity {
                             // Does not display alarm clock icon in status bar
                             //alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calSet.getTimeInMillis(), pendingIntent);
                         }
-                        Log.i("Alarm", "Alarm set for: " + hourOfDay + ":" + minute);
+                        String alarmTime = hourOfDay + ":" + minute;
+                        Log.i("Alarm", "Alarm set for: " + alarmTime);
+
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("hh:mm", Locale.CANADA);
+                            Date dateObj = sdf.parse(alarmTime);
+                            txtAlarmTime.setText(new SimpleDateFormat("hh:mm a", Locale.CANADA).format(dateObj));
+                            Log.i("TEST", "alarm set for: " + sdf.format(dateObj));
+                            Toast.makeText(MainActivity.this, "The alarm has been set for: " + sdf.format(dateObj), Toast.LENGTH_SHORT).show();
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }, alarmHour, alarmMinute, false);
         timePickerDialog.show();
     }
 
     public void cancelAlarm() {
-        try {
+        if(alarmManager != null) {
             alarmManager.cancel(pendingIntent);
             Intent stopIntent = new Intent(MainActivity.this, RingtoneService.class);
             MainActivity.this.stopService(stopIntent);
             Log.i("Alarm", "The alarm has been cancelled.");
-        } catch(Exception e) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(MainActivity.this, "The alarm has been cancelled.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
             Log.i("Alarm", "There is no alarm clock to cancel.");
-            Toast.makeText(MainActivity.this, "There is no alarm to cancel.", Toast.LENGTH_SHORT).show();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(MainActivity.this, "There is no alarm to cancel.", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                txtAlarmTime.setText(R.string.alarm_no_alarm);
+            }
+        });
+
     }
 
     private void publishTest() {
