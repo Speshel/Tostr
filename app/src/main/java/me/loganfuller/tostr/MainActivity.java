@@ -6,7 +6,6 @@ import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -14,9 +13,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
@@ -29,10 +26,8 @@ import com.pubnub.api.models.consumer.PNPublishResult;
 import com.pubnub.api.models.consumer.PNStatus;
 import com.pubnub.api.models.consumer.pubsub.PNMessageResult;
 import com.pubnub.api.models.consumer.pubsub.PNPresenceEventResult;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
@@ -56,11 +51,16 @@ public class MainActivity extends AppCompatActivity {
     AlarmManager alarmManager;
 
     /*
+    Miscellaneous Variables
+     */
+    String timeStart = null;
+    String timeStop = null;
+
+    /*
     View declarations
      */
     TextView txtStatus, txtAlarmTime;
-    Button btnSetAlarm;
-    ListView lvAlarms;
+    Button btnSetAlarm, btnStopAlarm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,12 +108,13 @@ public class MainActivity extends AppCompatActivity {
                 //When radio/connectivity is lost
                 if(status.getCategory() == PNStatusCategory.PNUnexpectedDisconnectCategory) {
                     Toast.makeText(MainActivity.this, "Connection to PubNub lost. Attempting to reconnect.", Toast.LENGTH_LONG).show();
+                    txtStatus.setText(R.string.pubnub_status_disconnected);
                 }
                 else if(status.getCategory() == PNStatusCategory.PNConnectedCategory) {
                     // We are connected, so we can now publish successfully.
                     if(status.getCategory() == PNStatusCategory.PNConnectedCategory) {
                         txtStatus.setText(R.string.pubnub_status_connected);
-                        pubnub.publish().channel(channel).message("Successfully connected to channel " + channel).async(new PNCallback<PNPublishResult>() {
+                        pubnub.publish().channel(channel).message("Android has successfully connected to channel " + channel).async(new PNCallback<PNPublishResult>() {
                             @Override
                             public void onResponse(PNPublishResult result, PNStatus status) {
                                 // Check whether request completed successfully
@@ -167,7 +168,13 @@ public class MainActivity extends AppCompatActivity {
         txtStatus = (TextView) findViewById(R.id.txtStatus);
         txtAlarmTime = (TextView) findViewById(R.id.txtAlarmTime);
 
-        lvAlarms = (ListView) findViewById(R.id.lvAlarms);
+        btnStopAlarm = (Button) findViewById(R.id.btnStopAlarm);
+        btnStopAlarm.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                cancelAlarm();
+            }
+        });
 
         btnSetAlarm = (Button) findViewById(R.id.btnSetAlarm);
         btnSetAlarm.setOnClickListener(new View.OnClickListener() {
@@ -177,17 +184,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /*
-        Initializing lvAlarms
-         */
-
-
     }
 
     public void setAlarm() {
         final Calendar c = Calendar.getInstance();
         int alarmHour = c.get(Calendar.HOUR_OF_DAY);
         int alarmMinute = c.get(Calendar.MINUTE);
+
+        Date curDate = new Date();
+        final SimpleDateFormat format = new SimpleDateFormat("hh:mm:ss", Locale.CANADA);
+        timeStart = format.format(curDate);
+        Log.i("TEST", timeStart);
 
         TimePickerDialog timePickerDialog = new TimePickerDialog(this,
                 new TimePickerDialog.OnTimeSetListener() {
@@ -220,15 +227,16 @@ public class MainActivity extends AppCompatActivity {
                             // Does not display alarm clock icon in status bar
                             //alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calSet.getTimeInMillis(), pendingIntent);
                         }
-                        String alarmTime = hourOfDay + ":" + minute;
+                        String alarmTime = hourOfDay + ":" + minute + ":0";
+                        timeStop = alarmTime;
                         Log.i("Alarm", "Alarm set for: " + alarmTime);
 
                         try {
                             SimpleDateFormat sdf = new SimpleDateFormat("hh:mm", Locale.CANADA);
                             Date dateObj = sdf.parse(alarmTime);
                             txtAlarmTime.setText(new SimpleDateFormat("hh:mm a", Locale.CANADA).format(dateObj));
-                            Log.i("TEST", "alarm set for: " + sdf.format(dateObj));
                             Toast.makeText(MainActivity.this, "The alarm has been set for: " + sdf.format(dateObj), Toast.LENGTH_SHORT).show();
+                            timeStop = alarmTime;
                         } catch (ParseException e) {
                             e.printStackTrace();
                         }
@@ -265,19 +273,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-    }
-
-    private void publishTest() {
-        pubnub.publish().message(Arrays.asList("hello", "there")).channel(channel).async(new PNCallback<PNPublishResult>() {
-            @Override
-            public void onResponse(PNPublishResult result, PNStatus status) {
-                if(!status.isError()) {
-                    Log.i(PN, "Publish sent!");
-                } else {
-                    Log.w(PN, "Publish not sent!");
-                }
-            }
-        });
     }
 
     @Override

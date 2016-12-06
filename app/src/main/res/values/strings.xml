@@ -2,5 +2,7 @@
     <string name="app_name">Tostr</string>
     <string name="action_emergency_stop">Stop Alarm</string>
     <string name="alarm_no_alarm">No Alarm Set</string>
+    <string name="pubnub_status_disconnected">DISCONNECTED</string>
     <string name="pubnub_status_connected">CONNECTED</string>
+    <string name="alarm_ringing">Alarm Ringing!!!</string>
 </resources>

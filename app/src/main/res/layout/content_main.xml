@@ -58,12 +58,6 @@
             android:layout_alignParentRight="true"
             android:layout_alignParentBottom="true" />-->
 
-        <ListView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_above="@+id/btnSetAlarm"
-            android:id="@+id/lvAlarms" />
-
         <Button
             android:text="Create Alarm"
             android:layout_width="match_parent"
@@ -74,6 +68,21 @@
             android:layout_gravity="bottom"
             android:background="@color/colorPrimaryDark"
             android:textColor="?android:attr/textColorPrimaryInverse" />
+
+        <Button
+            android:text="Stop Alarm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btnStopAlarm"
+            android:layout_gravity="bottom"
+            android:background="@color/colorPrimaryDark"
+            android:textColor="?android:attr/textColorPrimaryInverse"
+            android:layout_above="@+id/btnSetAlarm"
+            android:layout_alignParentLeft="false"
+            android:layout_alignParentStart="false"
+            android:layout_marginBottom="16dp"
+            android:layout_marginTop="16dp" />
+
     </RelativeLayout>
 
     <TextView

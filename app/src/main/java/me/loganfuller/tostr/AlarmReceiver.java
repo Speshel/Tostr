@@ -4,14 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
-
 import com.pubnub.api.PNConfiguration;
 import com.pubnub.api.PubNub;
 import com.pubnub.api.callbacks.PNCallback;
 import com.pubnub.api.models.consumer.PNPublishResult;
 import com.pubnub.api.models.consumer.PNStatus;
-
-import org.json.JSONObject;
 
 public class AlarmReceiver extends BroadcastReceiver{
 
@@ -33,7 +30,7 @@ public class AlarmReceiver extends BroadcastReceiver{
         Intent startIntent = new Intent(context, RingtoneService.class);
         context.startService(startIntent);
 
-        pubnub.publish().channel(channel).message("Alarm was received.").async(new PNCallback<PNPublishResult>() {
+        pubnub.publish().channel(channel).message("start".toString()).async(new PNCallback<PNPublishResult>() {
             @Override
             public void onResponse(PNPublishResult result, PNStatus status) {
                 // Check whether request completed successfully
