@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<title>Tostr</title>
+	<!-- Bootstrap core CSS -->
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<!-- Custom styles for this template -->
+	<link href="css/navbar.css" rel="stylesheet">
+	<!-- Custom styles for Google Charts table -->
+	<link href="css/chartsTable.css" rel="stylesheet">
+	<!-- PubNub -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="http://cdn.pubnub.com/pubnub-3.16.4.min.js"></script>
+	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+	<script src="https://code.highcharts.com/highcharts.js"></script>
+	<script src="https://code.highcharts.com/modules/exporting.js"></script>
+	<script type="text/javascript">
+		/*
+								google.charts.load('current', {
+									'packages': ['table']
+								});
+								google.charts.setOnLoadCallback(drawTable);
+
+								function drawTable() {
+									var cssClassNames = {
+										'headerRow': 'italic-darkblue-font large-font bold-font'
+										, 'tableRow': ''
+										, 'oddTableRow': 'beige-background'
+										, 'selectedTableRow': 'orange-background large-font'
+										, 'hoverTableRow': ''
+										, 'headerCell': 'gold-border'
+										, 'tableCell': ''
+										, 'rowNumberCell': 'underline-blue-font'
+									};
+									var options = {
+										'showRowNumber': false
+										, 'allowHtml': true
+										, 'cssClassNames': cssClassNames
+									};
+									var data = new google.visualization.DataTable();
+									data.addColumn('date', 'Date');
+									data.addColumn('string', 'Alarm Start Time');
+									data.addColumn('string', 'Alarm End Time');
+									data.addColumn('string', 'Alarm Difference');
+									data.addRows([
+						                [new Date(), "8:15", "8:30", "0:15"]
+						            ]);
+									var table = new google.visualization.Table(document.getElementById('table_div'));
+									table.draw(data, {
+										showRowNumber: true
+										, width: '100%'
+										, height: '100%'
+									});
+								}
+								*/
+		$(document).ready(function () {
+			initialDoc();
+			var set = false;
+			var pubnub = PUBNUB.init({
+				publish_key: "pub-c-8b0161d7-b88a-44b6-99e2-bd29ad0ecda9"
+				, subscribe_key: "sub-c-05493e44-b06e-11e6-b4d6-02ee2ddab7fe"
+				, error: function (error) {
+					console.log('Error:', error);
+				}
+			});
+			pubnub.subscribe({
+				channel: 'tostr'
+				, message: function (m) {
+					console.log(m);
+					if (m['message'] == 'stop') {
+						console.log("Made it to STOP");
+						// Post to database
+						$.ajax({
+							url: 'controller.php'
+							, method: 'POST'
+							, data: {
+								command: 'PostTime'
+								, fn: "stop"
+							}
+							, success: function (result, status) {
+								console.log("Result: " + result + " Status: " + status);
+								initialDoc();
+							}
+						});
+						// add to chart
+					}
+					else if (m == 'start') {
+						// post to database
+						$.ajax({
+							url: 'controller.php'
+							, method: 'POST'
+							, data: {
+								command: 'PostTime'
+								, fn: "start"
+							}
+							, success: function (result, status) {
+								console.log("Result: " + result + " Status: " + status);
+								initialDoc();
+							}
+						});
+						// add to chart
+					}
+				}
+				, error: function (error) {
+					// Handle error here
+					console.log(JSON.stringify(error));
+				}
+			});
+		});
+
+		function initialDoc() {
+			var data = [];
+			$.ajax({
+				url: 'controller.php'
+				, method: 'POST'
+				, data: {
+					command: 'ListPosted'
+				}
+				, success: function (result, status) {
+					data = JSON.parse(result);
+					console.log(data);
+					if (!data.isEmptyObject) {
+						var toChart = [];
+						var stopData = [];
+						var startData = [];
+						for (var i = 0; i < data.length; i++) {
+							if (data[i].Function == 'stop') {
+								var res = (data[i].Date).split(',');
+								var time = res[3] + ':' + res[4] + ':' + res[5];
+								var date = {
+									year: res[0],
+									month: res[1],
+									day: res[2]
+								}
+								time = time.replace(/[)]+/g, '');
+								time = time.replace(/[\s]+/g, '');
+								var temp = []
+								temp.push(date, time);
+								stopData.push(temp);
+							}
+							else if (data[i].Function == 'start') {
+								var res = (data[i].Date).split(',');
+								var time = res[3] + ':' + res[4] + ':' + res[5];
+								var date = {
+									year: res[0],
+									month: res[1],
+									day: res[2]
+								}
+								time = time.replace(/[)]+/g, '');
+								time = time.replace(/[\s]+/g, '');
+								var temp = []
+								temp.push(date, time);
+								startData.push(temp);
+							}
+						}
+						console.log(stopData);
+						console.log(startData);
+						Highcharts.chart('chartContainer', {
+							chart: {
+								type: 'spline'
+							}
+							, title: {
+								text: 'Wake-Up Comparison Times'
+							}
+							, subtitle: {
+								text: 'Time Comparison between Alarm Start and Stop'
+							}
+							, xAxis: {
+								type: 'datetime'
+								, title: {
+									text: 'Date'
+								}
+							}
+							, yAxis: {
+								type: 'datetime'
+								, title: {
+									text: 'Time'
+								}
+							}
+							, tooltip: {
+							}
+							, plotOptions: {
+								spline: {
+									marker: {
+										enabled: true
+									}
+								}
+							}
+							, series: [{
+								name: 'Stop'
+							}]
+						});
+					}
+				}
+			});
+		}
+	</script>
+</head>
+
+<body>
+	<div class="container">
+		<nav class="navbar navbar-light bg-faded"> <a class="navbar-brand" href="#">Tostr</a> </nav>
+		<!-- /navbar -->
+		<!-- Main component for a primary marketing message or call to action -->
+		<div class="jumbotron">
+			<h1>Sleep Data</h1>
+			<p>This chart will show the average alarm time as well as the average alarm shut-off time.</p>
+			<div id="chartContainer" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+			<div id="table_div"></div>
+		</div>
+	</div>
+	<!-- /container -->
+</body>
+<!-- Bootstrap core JavaScript
+    ================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.2.0/js/tether.min.js" integrity="sha384-Plbmg8JY28KFelvJVai01l8WyZzrYWG825m+cZ0eDDS1f7d/js6ikvy1+X+guPIB" crossorigin="anonymous"></script>
+<script src="js/bootstrap.min.js"></script>
+<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+<script src="js/ie10-viewport-bug-workaround.js"></script>
+
+</html>

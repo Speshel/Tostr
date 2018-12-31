@@ -1,0 +1,22 @@
+import sys
+import RPi.GPIO as GPIO
+from pubnub import Pubnub
+import json
+
+GPIO.setmode(GPIO.BCM)
+
+pubnub = Pubnub(publish_key="pub-c-8b0161d7-b88a-44b6-99e2-bd29ad0ecda9", subscribe_key="sub-c-05493e44-b06e-11e6-b4d6-02ee2ddab7fe", ssl_on = False)
+pubNubchannel = 'tostr'
+
+GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+def callback(channel):
+        print('stop')
+        data = {}
+        data['message'] = 'stop'
+        pubnub.publish(pubNubchannel, data)
+
+GPIO.add_event_detect(18, GPIO.RISING, callback=callback, bouncetime=300)
+
+while True:
+        pass
