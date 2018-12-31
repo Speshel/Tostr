@@ -1,7 +1,4 @@
-# Tostr (DISCONTINUED)
-Companion application for our project in our Internet of Things (IoT) course.
-
-## What Is It?
+# What Is It?
 Tostr is a project powered by a Python web server and an Android companion application (what this project is) and they communicate between each other using a service called PubNub. We have an ordinary toaster modified to detect when the toast goes down and when it pops. When either of these events occur, a message is sent to the server.
 
 ## Why?
